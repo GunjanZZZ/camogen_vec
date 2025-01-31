@@ -1,7 +1,7 @@
 from shapely.geometry import box, Polygon, MultiPolygon, GeometryCollection, Point, LineString
 from shapely.ops import split
 from shapely.affinity import scale
-from shapely.ops import cascaded_union
+from shapely.ops import unary_union
 import svgwrite
 
 import numpy as np
@@ -85,7 +85,7 @@ def generate_polygons(pattern, polygon, depth):
 
         n_polygons = split(polygon, edge_c)
 
-        for n_polygon in n_polygons:
+        for n_polygon in n_polygons.geoms:
             generate_polygons(pattern, n_polygon, depth - 1)
 
 
@@ -101,7 +101,7 @@ def find_neighbours(pattern):
 
 def touches_cluster(cluster, polygon):
     if len(cluster) > 0:
-        return cascaded_union([p.geom for p in cluster]).touches(polygon.geom)
+        return unary_union([p.geom for p in cluster]).touches(polygon.geom)
     else:
         return True
 
@@ -118,7 +118,7 @@ def merge_cluster(polygon, visited_polygons, bleed):
                 cluster.append(candidate)
                 visited_polygons.add(candidate)
                 current_bleed = current_bleed - 1
-                current_cluster_polygon = cascaded_union([p.geom for p in cluster])
+                current_cluster_polygon = unary_union([p.geom for p in cluster])
                 for neighbouring_candidate in candidate.list_neighbours:
                     if neighbouring_candidate not in visited_polygons and current_cluster_polygon.touches(neighbouring_candidate.geom):
                         candidates.append(neighbouring_candidate)
@@ -204,7 +204,7 @@ def generate(parameters, file_name):
     clusterized_polygons = []
     for cluster in clusters:
         geometries = [scale(p.geom,1.5,1.5) for p in cluster]
-        union = cascaded_union(geometries)
+        union = unary_union(geometries)
         clusterized_polygons.append(union)
 
     result = svgwrite.Drawing('1.svg', size=(pattern.width.item(), pattern.height.item()))
